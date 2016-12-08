@@ -27,6 +27,9 @@ from urlparse import urljoin
 BACKEND_URL = "https://api.kernelci.org"
 DISTINCT_URL = "/{}/distinct/{}/"
 
+HEADER_FMT = \
+    "Found {:d} distinct values for field \"{:s}\" in resource \"{:s}\".\n"
+
 
 def main(args):
     headers = {
@@ -61,14 +64,8 @@ def main(args):
             results = json_resp["result"]
             results.sort()
 
-            print(
-                "Found {:d} distinct values for field {:s} in \"{:s}\"".format(
-                    json_resp["count"],
-                    args.field,
-                    args.resource
-                )
-            )
-            print("")
+            print(HEADER_FMT.format(
+                json_resp["count"], args.field, args.resource))
 
             for res in results:
                 print("    {:s}".format(res))
