@@ -114,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t", "--token", required=True, help="The API token to use")
     parser.add_argument("-n", "--name", help="The name of the test suite")
-    parser.add_argument("-r", "--tree", help="The name of the tree/job")
+    parser.add_argument("-e", "--tree", help="The name of the tree/job")
     parser.add_argument("-k", "--kernel", help="The kernel version")
     parser.add_argument("-d", "--defconfig", help="The name of the defconfig")
     parser.add_argument("-b", "--board", help="The name of the board")
