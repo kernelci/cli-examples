@@ -1,0 +1,98 @@
+#!/usr/bin/python
+#
+# kci-cli
+# Copyright (C) 2016 Linaro Ltd.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import print_function
+
+import argparse
+import requests
+import sys
+
+from urlparse import urljoin
+
+BACKEND_URL = "https://api.kernelci.org"
+DISTINCT_URL = "/{}/distinct/{}/"
+
+
+def main(args):
+    headers = {
+        "Authorization": args.token
+    }
+
+    params = None
+    if any([args.tree, args.kernel, args.defconfig, args.board]):
+        params = {}
+
+        if args.tree:
+            params["job"] = args.tree
+        if args.kernel:
+            params["kernel"] = args.kernel
+        if args.defconfig:
+            params["defconfig_full"] = args.defconfig
+        if args.board:
+            params["board"] = args.board
+
+    url = urljoin(
+        BACKEND_URL, DISTINCT_URL.format(args.resource, args.field))
+
+    if params:
+        response = requests.get(url, params=params, headers=headers)
+    else:
+        response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        json_resp = response.json()
+
+        if json_resp["count"] > 0:
+            results = json_resp["result"]
+            results.sort()
+
+            print(
+                "Found {:d} distinct values for field {:s} in \"{:s}\"".format(
+                    json_resp["count"],
+                    args.field,
+                    args.resource
+                )
+            )
+            print("")
+
+            for res in results:
+                print("    {:s}".format(res))
+        else:
+            print("No data found")
+    else:
+        print("Error: {}".format(response.status_code))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-t", "--token", required=True, help="The API token to use")
+    parser.add_argument(
+        "-r", "--resource",
+        required=True,
+        help="The API resource to query",
+        choices=["job", "build", "boot"])
+    parser.add_argument(
+        "-f", "--field",
+        required=True, help="The field to get all the availables values of")
+    parser.add_argument("-e", "--tree", help="The name of the tree/job")
+    parser.add_argument("-k", "--kernel", help="The kernel version")
+    parser.add_argument("-d", "--defconfig", help="The name of the defconfig")
+    parser.add_argument("-b", "--board", help="The name of the board")
+
+    sys.exit(main(parser.parse_args()))
