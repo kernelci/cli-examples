@@ -18,6 +18,8 @@
 
 """Get all test cases data for a specified test suite name."""
 
+from __future__ import print_function
+
 import argparse
 import datetime
 import requests
@@ -25,9 +27,9 @@ import requests
 from urlparse import urljoin
 
 BACKEND_URL = "https://api.kernelci.org"
-HEADER_FMT = "{:^24s} {:^24} {:^20} {:^12}".format(
+HEADER_FMT = "{:^24s} {:^24} {:^24} {:^6}".format(
     "ID", "Date", "Name", "Status")
-TEST_CASE_FMT = "{:<24s} {:^24} {:<20} {:^12}"
+TEST_CASE_FMT = "{:<24s} {:^24} {:<24} {:^6}"
 
 
 def main(args):
@@ -36,11 +38,22 @@ def main(args):
     }
 
     params = {
-        "limit": args.limit,
-        "name": args.name,
         "sort": "created_on",
         "sort_order": -1,
     }
+
+    if args.limit != "all":
+        params["limit"] = args.limit
+    if args.name:
+        params["name"] = args.name
+    if args.board:
+        params["board"] = args.name
+    if args.defconfig:
+        params["defconfig_full"] = args.defconfig
+    if args.tree:
+        params["job"] = args.tree
+    if args.kernel:
+        params["kernel"] = args.kernel
 
     url = urljoin(BACKEND_URL, "/test/suite")
     response = requests.get(url, params=params, headers=headers)
@@ -52,8 +65,15 @@ def main(args):
             for res in results:
                 test_suite_id = res["_id"]["$oid"]
 
-                print "Test results for test suite id: {}\n".format(
-                    test_suite_id)
+                print("Test results for test suite: {}\n".format(res["name"]))
+                print("    ID       : {}".format(test_suite_id))
+                print("    Lab name : {}".format(res["lab_name"]))
+                print("    Board    : {}".format(res["board"]))
+                print("    Arch     : {}".format(res["arch"]))
+                print("    Tree     : {}".format(res["job"]))
+                print("    Kernel   : {}".format(res["kernel"]))
+                print("    Defconfig: {}".format(res["defconfig_full"]))
+                print("")
 
                 url = urljoin(BACKEND_URL, "/test/case")
                 params = {
@@ -62,8 +82,8 @@ def main(args):
                 response = requests.get(url, params=params, headers=headers)
 
                 if response.status_code == 200:
-                    print HEADER_FMT
-                    print "-" * 80
+                    print(HEADER_FMT)
+                    print("-" * 80)
 
                     test_cases = response.json()["result"]
                     for case in test_cases:
@@ -71,31 +91,39 @@ def main(args):
                         created = \
                             datetime.datetime.utcfromtimestamp(created / 1000)
 
-                        print TEST_CASE_FMT.format(
+                        print(TEST_CASE_FMT.format(
                             case["_id"]["$oid"],
                             created.isoformat(),
-                            case["name"],
+                            case["name"][0:22],
                             case["status"]
-                        )
+                        ))
                 else:
-                    print "Error getting test cases"
+                    print("Error getting test cases")
 
-                print "=" * 80
-                print "\n"
+                print("=" * 80)
+                print("\n")
         else:
-            print "No results found"
+            print("No results found")
     else:
-        print "Error: {}".format(response.status_code)
+        print("Error: {}".format(response.status_code))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-t", "--token", required=True, help="The API token to use")
-    parser.add_argument(
-        "-n", "--name", required=True, help="The name of the test suite")
+    parser.add_argument("-n", "--name", help="The name of the test suite")
+    parser.add_argument("-r", "--tree", help="The name of the tree/job")
+    parser.add_argument("-k", "--kernel", help="The kernel version")
+    parser.add_argument("-d", "--defconfig", help="The name of the defconfig")
+    parser.add_argument("-b", "--board", help="The name of the board")
     parser.add_argument(
         "-l", "--limit",
-        type=int, default=5, help="How many test suite results to retrieve")
+        default=5,
+        help=(
+            "How many test suite results to retrieve, use \"all\" to "
+            "retrieve all of them"
+        )
+    )
 
     main(parser.parse_args())
