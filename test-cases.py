@@ -23,6 +23,7 @@ from __future__ import print_function
 import argparse
 import datetime
 import requests
+import sys
 
 from urlparse import urljoin
 
@@ -126,4 +127,4 @@ if __name__ == "__main__":
         )
     )
 
-    main(parser.parse_args())
+    sys.exit(main(parser.parse_args()))
